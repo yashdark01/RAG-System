@@ -23,7 +23,7 @@ A Retrieval-Augmented Generation (RAG) system backend built with FastAPI and Lan
 1. Clone the repository:
    ```bash
    git clone https://github.com/yashdark01/RAG-System.git
-   cd RAG-System/backend
+   cd RAG-System
    ```
 
 2. Create a virtual environment:
@@ -38,7 +38,7 @@ A Retrieval-Augmented Generation (RAG) system backend built with FastAPI and Lan
    ```
 
 4. Set up environment variables:
-   Create a `.env` file in the backend directory with your API keys:
+   Create a `.env` file in the root directory with your API keys:
    ```env
    OPENAI_API_KEY=your_openai_key
    GOOGLE_API_KEY=your_google_key
@@ -54,6 +54,28 @@ A Retrieval-Augmented Generation (RAG) system backend built with FastAPI and Lan
    The API will be available at `http://127.0.0.1:8000`
 
 2. Access the API documentation at `http://127.0.0.1:8000/docs`
+
+## Docker Usage
+
+1. Ensure Docker and Docker Compose are installed.
+
+2. Build and run the application using Docker Compose:
+   ```bash
+   docker-compose up --build
+   ```
+   The API will be available at `http://127.0.0.1:8000`
+
+3. To run in the background:
+   ```bash
+   docker-compose up -d --build
+   ```
+
+4. Stop the containers:
+   ```bash
+   docker-compose down
+   ```
+
+Note: Data (vector database and uploaded documents) is persisted in the `data/` directory via Docker volumes. Ensure your `.env` file is in the root directory with required API keys.
 
 ## API Endpoints
 
@@ -100,7 +122,7 @@ The system uses the following components (configurable in `app/core/`):
 ## Project Structure
 
 ```
-backend/
+RAG-System/
 ├── app/
 │   ├── api/
 │   │   ├── ingest.py      # Document upload endpoint
@@ -121,7 +143,8 @@ backend/
 ├── collection/            # Postman collection
 ├── .env                   # Environment variables
 ├── pyproject.toml         # Project metadata
-└── requirements.txt       # Dependencies
+├── requirements.txt       # Dependencies
+└── README.md              # This file
 ```
 
 ## Development
