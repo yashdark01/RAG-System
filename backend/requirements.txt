@@ -1,0 +1,31 @@
+# requirements.txt
+
+# FastAPI and Server
+fastapi>=0.111.0
+uvicorn[standard]>=0.24.0
+
+# LangChain Core
+langchain>=0.3.0
+langchain-community>=0.3.0
+langchain-text-splitters>=0.3.0
+
+# FREE LLM Provider - Groq (fast and generous free tier)
+langchain-groq>=0.2.0
+
+# Alternative FREE option - Ollama (local, no API key needed)
+# langchain-ollama>=0.2.0
+
+# Embeddings (free, runs locally)
+langchain-huggingface>=0.1.0
+sentence-transformers>=3.0.0
+
+# Vector Store
+faiss-cpu>=1.8.0
+
+# Document Processing
+pypdf>=4.0.0
+python-multipart>=0.0.9
+
+# Utilities
+python-dotenv>=1.0.0
+pydantic>=2.0.0
