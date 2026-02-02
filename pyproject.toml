@@ -28,7 +28,7 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["app*", "data*"]
+include = ["app*"]
 
 [build-system]
 requires = ["setuptools", "wheel"]

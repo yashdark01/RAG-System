@@ -1,37 +1,53 @@
-# app/core/llm.py
-from langchain_google_genai import ChatGoogleGenerativeAI
+import logging
 import os
+from typing import Optional
+
+from langchain_groq import ChatGroq
+
+logger = logging.getLogger(__name__)
+
+# Default Groq model – using llama-3.1-8b-instant (fast and reliable)
+# Alternative models: mixtral-8x7b-32768, llama-3.3-70b-versatile
+DEFAULT_GROQ_MODEL = "openai/gpt-oss-120b"
 
 
-def get_llm(temperature=0.7, model_name="gemini-1.5-flash-latest"):
+def get_llm(temperature: float = 0.7, model_name: Optional[str] = None) -> ChatGroq:
     """
-    Initialize and return a Google Gemini language model.
-    Gemini has a generous free tier that's perfect for development.
-    
-    Available models (use -latest suffix):
-    - gemini-1.5-flash-latest (fastest, recommended)
-    - gemini-1.5-pro-latest (more capable)
-    - gemini-2.0-flash-exp (experimental)
+    Initialize and return a Groq-hosted LLM.
+
+    This replaces the previous Google Gemini setup to avoid 404 model errors.
+
+    Requirements:
+    - Install `langchain-groq` (see requirements.txt)
+    - Set GROQ_API_KEY in your environment / .env file.
+      You can get a free key from: https://console.groq.com/keys
 
     Args:
-        temperature (float): The temperature setting for the model (0.0 to 1.0).
-        model_name (str): The name of the Gemini model to use.
-    Returns:
-        ChatGoogleGenerativeAI: An instance of the Gemini model.
-    """
-    api_key = os.getenv("GOOGLE_API_KEY")
-    
-    if not api_key:
-        raise ValueError(
-            "GOOGLE_API_KEY not found in environment variables. "
-            "Get your free API key from https://aistudio.google.com/app/apikey"
-        )
+        temperature: Sampling temperature for the model.
+        model_name: Groq model name to use. If not provided,
+            defaults to DEFAULT_GROQ_MODEL.
 
-    llm = ChatGoogleGenerativeAI(
-        model=model_name,
+    Returns:
+        ChatGroq: Configured Groq chat model instance.
+    """
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        error_msg = (
+            "GROQ_API_KEY not found in environment variables. "
+            "Get a free API key from https://console.groq.com/keys "
+            "and add it to your .env file."
+        )
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+
+    if model_name is None:
+        model_name = DEFAULT_GROQ_MODEL
+
+    logger.info("Initializing Groq LLM with model: %s", model_name)
+    llm = ChatGroq(
+        groq_api_key=api_key,
+        model_name=model_name,
         temperature=temperature,
-        google_api_key=api_key,
-        convert_system_message_to_human=True,
-        max_output_tokens=2048,
     )
+    logger.info("Groq LLM initialized successfully")
     return llm
