@@ -6,7 +6,7 @@ A Retrieval-Augmented Generation (RAG) system backend built with FastAPI and Lan
 
 - **Document Ingestion**: Upload and index PDF documents using FAISS vector store and sentence transformers.
 - **Question Answering**: Ask questions and get AI-generated answers based on indexed documents with source references.
-- **Multiple LLM Support**: Integrates with OpenAI, Google Gemini, Ollama, and Hugging Face models.
+- **Multiple LLM Support**: Integrates with Groq (default), OpenAI, Google Gemini, Ollama, and Hugging Face models.
 - **FastAPI Backend**: RESTful API with automatic documentation.
 - **Vector Search**: Efficient similarity search using FAISS for document retrieval.
 
@@ -48,6 +48,10 @@ A Retrieval-Augmented Generation (RAG) system backend built with FastAPI and Lan
 ## Usage
 
 1. Start the server:
+   ```bash
+   uvicorn app.main:app --host 0.0.0.0 --port 8000
+   ```
+   Or alternatively:
    ```bash
    python app/main.py
    ```
@@ -116,7 +120,7 @@ The system uses the following components (configurable in `app/core/`):
 
 - **Embeddings**: Sentence Transformers (default: `all-MiniLM-L6-v2`)
 - **Vector Store**: FAISS
-- **LLM**: Configurable via environment (OpenAI by default)
+- **LLM**: Configurable via environment (Groq by default, via `GROQ_API_KEY`)
 - **Chunking**: Recursive text splitter with configurable chunk size
 
 ## Project Structure

@@ -1,5 +1,5 @@
 # app/services/rag_chain.py
-from langchain_core.runnables import RunnablePassthrough
+from langchain_core.runnables import RunnableLambda
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
@@ -15,7 +15,10 @@ def build_rag_chain(llm, retriever):
         Runnable: A RAG chain that can be used to answer questions based on retrieved documents.
     """
 
-    template = """Answer the question based only on the following context. If you cannot answer the question based on the context, say "I don't have enough information to answer this question."
+    template = """Answer the question based only on the following context. Use the conversation history only for context. If you cannot answer the question based on the context, say "I don't have enough information to answer this question."
+
+Conversation history:
+{chat_history}
 
 Context:
 {context}
@@ -30,9 +33,13 @@ Answer: """
         """Format retrieved documents into a single string."""
         return "\n\n".join([doc.page_content for doc in docs])
 
-    # Build the chain with proper retriever integration
+    # Build the chain: context from retriever (using question only), question and chat_history from input dict
     chain = (
-        {"context": retriever | format_docs, "question": RunnablePassthrough()}
+        {
+            "context": RunnableLambda(lambda x: x["question"]) | retriever | format_docs,
+            "question": RunnableLambda(lambda x: x["question"]),
+            "chat_history": RunnableLambda(lambda x: x.get("chat_history", "")),
+        }
         | prompt
         | llm
         | StrOutputParser()
