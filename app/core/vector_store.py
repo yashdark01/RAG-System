@@ -28,12 +28,14 @@ def create_vector_store(documents, embedding_model):
     # Check if vector store already exists
     if os.path.exists(VECTOR_DB_PATH):
         logger.info(f"Loading existing vector store from {VECTOR_DB_PATH}")
+
         # Load existing store and add new documents
         existing_store = FAISS.load_local(
             VECTOR_DB_PATH,
             embedding_model,
             allow_dangerous_deserialization=True
         )
+        
         existing_store.add_documents(documents)
         existing_store.save_local(VECTOR_DB_PATH)
         logger.info(f"Added {len(documents)} documents to existing vector store")
