@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 # Load environment variables from .env file
 load_dotenv()
 
-# Import routers for document ingestion and querying
-from app.api import ingest, query
+# Import routers for document ingestion, querying, and OCR
+from app.api import ingest, ocr, query
 
 # Initialize FastAPI application with a title
 app = FastAPI(title="RAG System API")
@@ -44,6 +44,9 @@ app.include_router(ingest.router, prefix="/api", tags=["Ingestion"])
 
 # Include the query router with /api prefix
 app.include_router(query.router, prefix="/api", tags=["Query"])
+
+# Include the OCR router with /api/ocr prefix
+app.include_router(ocr.router, prefix="/api/ocr", tags=["OCR"])
 
 # Define GET endpoint for health check
 @app.get("/", tags=["Health"])

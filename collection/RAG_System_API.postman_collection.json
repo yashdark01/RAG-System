@@ -184,6 +184,223 @@
           "body": "{\n    \"answer\": \"The main topic is Retrieval-Augmented Generation (RAG) systems.\",\n    \"sources\": [\n        {\n            \"page\": 1,\n            \"source\": \"sample.pdf\"\n        }\n    ]\n}"
         }
       ]
+    },
+    {
+      "name": "OCR",
+      "item": [
+        {
+          "name": "OCR - Process Document",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "document_type",
+                  "type": "text",
+                  "value": "invoice"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ocr/process?document_type=invoice",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ocr",
+                "process"
+              ],
+              "query": [
+                {
+                  "key": "document_type",
+                  "value": "invoice"
+                }
+              ]
+            },
+            "description": "Process a single document with the OCR service"
+          }
+        },
+        {
+          "name": "OCR - Batch Process",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "files",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "files",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "document_type",
+                  "type": "text",
+                  "value": "invoice"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ocr/batch?document_type=invoice",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ocr",
+                "batch"
+              ],
+              "query": [
+                {
+                  "key": "document_type",
+                  "value": "invoice"
+                }
+              ]
+            },
+            "description": "Process multiple documents with the OCR service"
+          }
+        },
+        {
+          "name": "OCR - Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/ocr/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ocr",
+                "health"
+              ]
+            },
+            "description": "Health check for the OCR service"
+          }
+        },
+        {
+          "name": "OCR - Metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/ocr/metrics",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ocr",
+                "metrics"
+              ]
+            },
+            "description": "Get OCR service metrics"
+          }
+        },
+        {
+          "name": "OCR - Cache Clear",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/ocr/cache/clear",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ocr",
+                "cache",
+                "clear"
+              ]
+            },
+            "description": "Clear OCR cache"
+          }
+        },
+        {
+          "name": "OCR - Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/ocr/status/{{document_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ocr",
+                "status",
+                "{{document_id}}"
+              ]
+            },
+            "description": "Get OCR result by document_id (from /api/ocr/process response)"
+          }
+        },
+        {
+          "name": "OCR - LLM Extract",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "document_type",
+                  "type": "text",
+                  "value": "invoice"
+                },
+                {
+                  "key": "task",
+                  "type": "text",
+                  "value": "Extract and normalize all key invoice fields."
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ocr/llm-extract?document_type=invoice&task=Extract%20and%20normalize%20all%20key%20invoice%20fields.",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ocr",
+                "llm-extract"
+              ],
+              "query": [
+                {
+                  "key": "document_type",
+                  "value": "invoice"
+                },
+                {
+                  "key": "task",
+                  "value": "Extract and normalize all key invoice fields."
+                }
+              ]
+            },
+            "description": "Run OCR and then an LLM to produce enriched structured JSON"
+          }
+        }
+      ]
     }
   ],
   "variable": [
