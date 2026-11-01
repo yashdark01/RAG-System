@@ -56,8 +56,8 @@ class Message:
 class LLMResponse:
     """Standardized LLM response."""
     content: str
-    model: str
-    provider: str
+    model: str = "default"
+    provider: str = "langchain"
     usage: Dict[str, int] = field(default_factory=dict)
     finish_reason: Optional[str] = None
     tool_calls: Optional[List[Dict[str, Any]]] = None
@@ -85,10 +85,14 @@ def create_chat_model(
 ) -> BaseChatModel:
     """
     Factory creating native LangChain chat models with automatic cross-provider fallbacks.
-    Supported providers: gemini / google, groq, openai, anthropic, ollama.
+    Supported providers: gemini / google, groq, openai, anthropic, ollama, fake/mock.
     """
     provider = (provider or settings.LLM_PROVIDER).lower()
     temperature = temperature if temperature is not None else settings.LLM_TEMPERATURE
+
+    if provider in ("fake", "mock"):
+        from langchain_community.chat_models import FakeListChatModel
+        return FakeListChatModel(responses=["This is an automated test response from the assistant."])
     
     primary: Optional[BaseChatModel] = None
     

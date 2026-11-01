@@ -166,9 +166,13 @@ async def research_task(
 
 
 @router.get(
-    "/agents",
+    "",
     summary="List available agents",
     description="Get list of available agent types and their capabilities"
+)
+@router.get(
+    "/agents",
+    include_in_schema=False
 )
 async def list_agents() -> Dict[str, Any]:
     """List available agent types."""

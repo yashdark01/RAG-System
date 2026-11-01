@@ -133,6 +133,15 @@ def create_app() -> FastAPI:
             "docs": "/docs",
             "health": f"{settings.API_V1_PREFIX}/health"
         }
+
+    @app.get("/health", include_in_schema=False)
+    async def root_health():
+        """Direct health endpoint alias."""
+        return {
+            "status": "healthy",
+            "version": settings.APP_VERSION,
+            "environment": settings.APP_ENV
+        }
     
     # Custom docs endpoint (optional)
     if settings.APP_ENV == "production":

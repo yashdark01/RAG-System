@@ -137,7 +137,21 @@ class PromptManager:
             return ""
         return tpl.format(**kwargs)
 
-    def get_rag_prompt(self) -> ChatPromptTemplate:
+    def get_rag_prompt(
+        self,
+        query: Optional[str] = None,
+        context: Optional[str] = None,
+        question: Optional[str] = None,
+        **kwargs
+    ):
+        """Return the LangChain ChatPromptTemplate or formatted messages if arguments provided."""
+        user_q = question or query
+        if user_q is not None or context is not None:
+            return rag_chat_prompt.format_messages(
+                question=user_q or "",
+                context=context or "No relevant documents found.",
+                chat_history=kwargs.get("chat_history", [])
+            )
         return rag_chat_prompt
 
     def get_agent_prompt(self) -> ChatPromptTemplate:

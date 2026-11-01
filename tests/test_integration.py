@@ -12,9 +12,51 @@ class TestAPIEndpoints:
     
     @pytest.fixture
     def mock_app(self):
-        """Create a mock FastAPI app for testing."""
+        """Create a mock FastAPI app for testing with dependency overrides."""
         from app.main import app
-        return app
+        from app.dependencies import dependencies
+        from unittest.mock import MagicMock, AsyncMock
+
+        mock_rag = MagicMock()
+        mock_rag.query = AsyncMock(return_value={
+            "answer": "Machine learning is a subset of AI.",
+            "sources": [{"title": "Doc1", "snippet": "ML intro", "url": "doc1.txt"}],
+            "retrieval_count": 1,
+            "confidence": 0.95,
+            "processing_time": 0.12
+        })
+
+        mock_doc = MagicMock()
+        mock_doc.process_and_index = AsyncMock(return_value={
+            "document_id": "doc-123",
+            "filename": "test.txt",
+            "chunks_count": 2
+        })
+
+        mock_chat = MagicMock()
+        mock_chat.chat = AsyncMock(return_value={
+            "response": "Hello! I am ready to help.",
+            "conversation_id": "test_conv",
+            "sources": [],
+            "processing_time": 0.05,
+            "usage": {"total_tokens": 40}
+        })
+
+        mock_agent = MagicMock()
+        mock_agent.execute_task = AsyncMock(return_value={
+            "output": "Task completed.",
+            "steps": [],
+            "processing_time": 0.1
+        })
+
+        app.dependency_overrides[dependencies.get_rag_service] = lambda: mock_rag
+        app.dependency_overrides[dependencies.get_document_service] = lambda: mock_doc
+        app.dependency_overrides[dependencies.get_chat_service] = lambda: mock_chat
+        app.dependency_overrides[dependencies.get_agent_service] = lambda: mock_agent
+
+        yield app
+
+        app.dependency_overrides.clear()
     
     @pytest.fixture
     def client(self, mock_app):
@@ -24,15 +66,17 @@ class TestAPIEndpoints:
     def test_health_check(self, client):
         """Test health check endpoint."""
         response = client.get("/health")
-        assert response.status_code in [200, 404]  # 404 if endpoint doesn't exist yet
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "healthy"
     
     def test_list_agents(self, client):
         """Test list agents endpoint."""
         response = client.get("/api/v1/agents")
-        assert response.status_code in [200, 404]
-        if response.status_code == 200:
-            data = response.json()
-            assert "agents" in data
+        assert response.status_code == 200
+        data = response.json()
+        assert "agents" in data
+        assert "query" in data["agents"]
     
     def test_rag_query_endpoint(self, client):
         """Test RAG query endpoint."""
@@ -43,7 +87,10 @@ class TestAPIEndpoints:
                 "top_k": 5
             }
         )
-        assert response.status_code in [200, 404, 422]
+        assert response.status_code == 200
+        data = response.json()
+        assert "answer" in data
+        assert data["retrieval_count"] == 1
     
     def test_document_upload_endpoint(self, client):
         """Test document upload endpoint."""
@@ -51,18 +98,23 @@ class TestAPIEndpoints:
             "/api/v1/documents/upload",
             files={"file": ("test.txt", b"test content", "text/plain")}
         )
-        assert response.status_code in [200, 404, 422]
+        assert response.status_code == 200
+        data = response.json()
+        assert data["document_id"] == "doc-123"
+        assert data["status"] == "processed"
     
     def test_chat_endpoint(self, client):
         """Test chat endpoint."""
         response = client.post(
-            "/api/v1/chat",
+            "/api/v1/chat/",
             json={
                 "message": "Hello, how can you help me?",
                 "conversation_id": "test_conv"
             }
         )
-        assert response.status_code in [200, 404, 422]
+        assert response.status_code == 200
+        data = response.json()
+        assert "message" in data
 
 
 class TestAgentWorkflows:

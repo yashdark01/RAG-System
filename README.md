@@ -123,11 +123,13 @@ RAG-System/
 ## 🚀 Quickstart Guide
 
 ### 1. Prerequisites
+
 - Python 3.10+ (Recommended: Python 3.11)
 - `uv` (Recommended) or standard Python `venv` + `pip`
 - Git
 
 ### 2. Setup with uv (Recommended)
+
 ```bash
 # Clone the repository
 git clone https://github.com/your-username/RAG-System.git
@@ -141,18 +143,22 @@ source .venv/bin/activate
 uv pip install -e ".[dev]"
 ```
 
-*Alternatively, run the automated setup script:*
+_Alternatively, run the automated setup script:_
+
 ```bash
 chmod +x setup.sh && ./setup.sh
 ```
 
 ### 3. Configure Environment Variables
+
 Copy `.env.example` to `.env` and fill in your API keys:
+
 ```bash
 cp .env.example .env
 ```
 
 Key environment configurations:
+
 ```env
 # Application
 APP_NAME="RAG System"
@@ -176,14 +182,19 @@ EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 ```
 
 ### 4. Run the Application
+
 With `uv`:
+
 ```bash
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
+
 Or with activated virtual environment:
+
 ```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
+
 Open **[http://localhost:8000/docs](http://localhost:8000/docs)** to view the interactive OpenAPI documentation.
 
 ---
@@ -191,21 +202,25 @@ Open **[http://localhost:8000/docs](http://localhost:8000/docs)** to view the in
 ## 🐳 Docker Deployment
 
 To launch the full stack with PostgreSQL and Redis:
+
 ```bash
 docker-compose up --build -d
 ```
 
 Services:
+
 - **FastAPI Backend**: `http://localhost:8000`
 - **PostgreSQL Database**: `localhost:5432`
 - **Redis Cache**: `localhost:6379`
 
 To view logs:
+
 ```bash
 docker-compose logs -f app
 ```
 
 To stop:
+
 ```bash
 docker-compose down
 ```
@@ -214,25 +229,27 @@ docker-compose down
 
 ## 📡 API Reference & Examples
 
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/api/v1/health` | Basic application health check |
-| `GET` | `/api/v1/health/ready` | Deep readiness check (LLM, vector store, DB) |
-| `POST` | `/api/v1/documents/upload` | Upload & hierarchical chunk index (PDF, TXT, MD) |
-| `GET` | `/api/v1/documents/{id}` | Retrieve indexed document metadata |
-| `POST` | `/api/v1/rag/query` | Standard RAG question answering with citations |
-| `POST` | `/api/v1/rag/query/stream` | Server-Sent Events (SSE) token streaming |
-| `POST` | `/api/v1/agents/execute` | Tool-calling autonomous agent execution |
-| `POST` | `/api/v1/agents/execute/stream`| Real-time agent reasoning token streaming |
-| `POST` | `/api/v1/chat` | Multi-turn conversational chat with session memory |
+| Method | Endpoint                        | Description                                        |
+| :----- | :------------------------------ | :------------------------------------------------- |
+| `GET`  | `/api/v1/health`                | Basic application health check                     |
+| `GET`  | `/api/v1/health/ready`          | Deep readiness check (LLM, vector store, DB)       |
+| `POST` | `/api/v1/documents/upload`      | Upload & hierarchical chunk index (PDF, TXT, MD)   |
+| `GET`  | `/api/v1/documents/{id}`        | Retrieve indexed document metadata                 |
+| `POST` | `/api/v1/rag/query`             | Standard RAG question answering with citations     |
+| `POST` | `/api/v1/rag/query/stream`      | Server-Sent Events (SSE) token streaming           |
+| `POST` | `/api/v1/agents/execute`        | Tool-calling autonomous agent execution            |
+| `POST` | `/api/v1/agents/execute/stream` | Real-time agent reasoning token streaming          |
+| `POST` | `/api/v1/chat`                  | Multi-turn conversational chat with session memory |
 
 ### Example 1: Ingest a Document
+
 ```bash
 curl -X POST "http://localhost:8000/api/v1/documents/upload" \
   -F "file=@sample_report.pdf"
 ```
 
 ### Example 2: Standard RAG Query
+
 ```bash
 curl -X POST "http://localhost:8000/api/v1/rag/query" \
   -H "Content-Type: application/json" \
@@ -243,6 +260,7 @@ curl -X POST "http://localhost:8000/api/v1/rag/query" \
 ```
 
 ### Example 3: Stream RAG Query (Server-Sent Events)
+
 ```bash
 curl -N -X POST "http://localhost:8000/api/v1/rag/query/stream" \
   -H "Content-Type: application/json" \
@@ -252,6 +270,7 @@ curl -N -X POST "http://localhost:8000/api/v1/rag/query/stream" \
 ```
 
 ### Example 4: Autonomous Agent Execution (with Tavily Search)
+
 ```bash
 curl -X POST "http://localhost:8000/api/v1/agents/execute" \
   -H "Content-Type: application/json" \
@@ -265,16 +284,34 @@ curl -X POST "http://localhost:8000/api/v1/agents/execute" \
 
 ## 🧪 Testing
 
-Run unit and integration tests with `uv`:
+The test suite contains **109 comprehensive unit and integration tests** covering all modules, running fully offline with fast mocked embeddings and LLMs:
+
 ```bash
+# Run all tests using uv
 uv run pytest tests/ -v
+
+# Run a specific test module
+uv run pytest tests/test_retriever.py -v
+uv run pytest tests/test_services.py -v
+uv run pytest tests/test_integration.py -v
 ```
-Or with activated venv:
-```bash
-pytest tests/ -v
-```
+
+### Test Suite Structure
+
+| Test File | Target Module | Scope & Capabilities Tested |
+| :--- | :--- | :--- |
+| [`test_config.py`](file:///Users/yash/Desktop/RAG-System/tests/test_config.py) | `app.config` | Settings parsing, fallback keys (`GEMINI_API_KEY` ↔ `GOOGLE_API_KEY`), and debug flags |
+| [`test_document_processor.py`](file:///Users/yash/Desktop/RAG-System/tests/test_document_processor.py) | `app.rag.document_processor` | Text cleaning, parent-child chunking, PDF extraction, and LangChain Document conversion |
+| [`test_retriever.py`](file:///Users/yash/Desktop/RAG-System/tests/test_retriever.py) | `app.rag.retriever` | Semantic vector search, BM25 keyword matching, Reciprocal Rank Fusion (RRF), and metadata filters |
+| [`test_services.py`](file:///Users/yash/Desktop/RAG-System/tests/test_services.py) | `app.services` | `DocumentService`, `RAGService`, `ChatService`, and `AgentService` task workflows |
+| [`test_agents.py`](file:///Users/yash/Desktop/RAG-System/tests/test_agents.py) | `app.workflow.agents` | Multi-agent execution (Query, Research, Synthesis, Validation) |
+| [`test_tools.py`](file:///Users/yash/Desktop/RAG-System/tests/test_tools.py) | `app.workflow.tools` | RAG retrieval, vector store search, Tavily web search, and claim verification tools |
+| [`test_domain_models.py`](file:///Users/yash/Desktop/RAG-System/tests/test_domain_models.py) | `app.models` | Pydantic schema validation, domain entities, and metadata serialization |
+| [`test_langchain_pipeline.py`](file:///Users/yash/Desktop/RAG-System/tests/test_langchain_pipeline.py) | `app.llm`, `app.workflow` | Native LangChain 1.3+ chat models, prompt templates, and agent creation |
+| [`test_integration.py`](file:///Users/yash/Desktop/RAG-System/tests/test_integration.py) | `app.main`, `app.api` | End-to-end FastAPI endpoint tests and multi-agent pipeline integration |
 
 ---
 
 ## 📄 License
+
 MIT License.

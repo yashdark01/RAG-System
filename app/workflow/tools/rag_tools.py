@@ -79,7 +79,15 @@ async def search_vector_store(
     if not vector_store_service:
         return []
     try:
-        return await vector_store_service.search_by_vector(query_embedding, top_k=top_k)
+        if hasattr(vector_store_service, "search"):
+            res = vector_store_service.search(query_embedding, top_k=top_k)
+        elif hasattr(vector_store_service, "search_by_vector"):
+            res = vector_store_service.search_by_vector(query_embedding, top_k=top_k)
+        else:
+            return []
+        if asyncio.iscoroutine(res):
+            res = await res
+        return res if isinstance(res, list) else (res or [])
     except Exception as e:
         logger.error(f"Vector store search failed: {e}")
         return []

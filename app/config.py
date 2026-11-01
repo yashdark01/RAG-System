@@ -5,13 +5,20 @@ Uses pydantic-settings for environment variable loading and validation.
 
 import os
 from pathlib import Path
-from typing import Optional, Literal
-from pydantic_settings import BaseSettings
+from typing import Optional, Literal, Union
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field, field_validator
 
 
 class Settings(BaseSettings):
     """Application settings with environment variable support."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        case_sensitive=False
+    )
     
     # Application
     APP_NAME: str = "RAG System"
@@ -58,6 +65,7 @@ class Settings(BaseSettings):
     
     # API Keys
     GOOGLE_API_KEY: Optional[str] = None
+    GEMINI_API_KEY: Optional[str] = None
     GROQ_API_KEY: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
     ANTHROPIC_API_KEY: Optional[str] = None
@@ -92,10 +100,21 @@ class Settings(BaseSettings):
     UPLOAD_DIR: Path = Path("./data/uploads")
     MODELS_DIR: Path = Path("./models")
     
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
+    @field_validator("DEBUG", mode="before")
+    @classmethod
+    def parse_debug(cls, v):
+        """Parse debug flag flexibly."""
+        if isinstance(v, str):
+            return v.lower() in ("true", "1", "yes", "debug", "dev", "development")
+        return bool(v)
+
+    @field_validator("GOOGLE_API_KEY", mode="before")
+    @classmethod
+    def fallback_google_key(cls, v, info):
+        """Fallback to GEMINI_API_KEY if GOOGLE_API_KEY is not set."""
+        if not v and hasattr(info, "data"):
+            return info.data.get("GEMINI_API_KEY")
+        return v
     
     @field_validator("DATABASE_URL", mode='before')
     @classmethod
@@ -114,7 +133,12 @@ class Settings(BaseSettings):
         return v
     
     def model_post_init(self, __context):
-        """Create necessary directories after initialization."""
+        """Create necessary directories and harmonize API keys after initialization."""
+        if not self.GEMINI_API_KEY and self.GOOGLE_API_KEY:
+            self.GEMINI_API_KEY = self.GOOGLE_API_KEY
+        elif not self.GOOGLE_API_KEY and self.GEMINI_API_KEY:
+            self.GOOGLE_API_KEY = self.GEMINI_API_KEY
+
         os.makedirs(self.DATA_DIR, exist_ok=True)
         os.makedirs(self.UPLOAD_DIR, exist_ok=True)
         os.makedirs(self.VECTOR_STORE_PATH, exist_ok=True)
