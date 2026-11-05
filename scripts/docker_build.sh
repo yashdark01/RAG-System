@@ -16,3 +16,4 @@ docker build -t "${IMAGE_NAME}:${TAG}" .
 
 echo "✅ Docker image built successfully!"
 echo "Run with: docker run -p 8000:8000 ${IMAGE_NAME}:${TAG}"
+
