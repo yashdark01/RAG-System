@@ -39,13 +39,9 @@ jobs:
           uv run ruff check app/ tests/ scripts/
 
   test:
-    name: Test Suite (Python ${{ matrix.python-version }})
+    name: Test Suite (Python 3.12)
     needs: lint
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.12"]
 
     env:
       APP_ENV: "development"
@@ -63,10 +59,10 @@ jobs:
           enable-cache: true
           version: "latest"
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
 
       - name: Install dependencies
         run: |
