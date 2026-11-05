@@ -1,21 +1,30 @@
-# Use Python 3.11 slim image as base
-FROM python:3.11-slim
+FROM python:3.12-slim
 
-# Set working directory
 WORKDIR /app
 
-# Copy requirements and install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy the application code
-COPY app/ ./app/
+# Install uv from official binary
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
-# Set PYTHONPATH to ensure imports work correctly
-ENV PYTHONPATH=/app
+# Copy dependency files
+COPY pyproject.toml requirements.txt ./
 
-# Expose port 8000
+# Install dependencies using uv into system environment
+RUN uv pip install --system --no-cache -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Ensure data directories exist
+RUN mkdir -p data/vector_store data/uploads logs
+
+# Expose application port
 EXPOSE 8000
 
-# Command to run the application using uvicorn (standard for FastAPI)
+# Run FastAPI server
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

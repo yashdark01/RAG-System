@@ -1,56 +1,176 @@
-# main.py
-import logging
-import os
+"""
+Main application entry point.
+Configures and starts the FastAPI application.
+"""
+
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
 from fastapi import FastAPI
-from dotenv import load_dotenv
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.openapi.utils import get_openapi
+import uvicorn
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+from app.config import settings
+from app.api.v1.router import api_router
+from app.api.middleware import setup_middleware
+from app.logging.logger import setup_logging, get_logger
+from app.database.session import init_db, close_db
+from app.cache.redis_cache import init_redis, close_redis
 
-# Load environment variables from .env file
-load_dotenv()
-
-# Import routers for document ingestion and querying
-from app.api import ingest, query
-
-# Initialize FastAPI application with a title
-app = FastAPI(title="RAG System API")
+logger = get_logger(__name__)
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Validate environment variables and log startup information."""
-    logger.info("Starting RAG System API...")
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """
+    Application lifespan manager.
+    Handles startup and shutdown events.
+    """
+    # Startup
+    logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
+    logger.info(f"Environment: {settings.APP_ENV}")
     
-    # Check for required environment variables
-    groq_api_key = os.getenv("GROQ_API_KEY")
-    if not groq_api_key:
-        logger.warning(
-            "GROQ_API_KEY not found in environment variables. "
-            "The /api/ask endpoint will fail. "
-            "Get your free API key from https://console.groq.com/keys"
+    try:
+        # Initialize database
+        await init_db()
+        logger.info("Database initialized")
+        
+        # Initialize Redis
+        await init_redis()
+        logger.info("Redis initialized")
+        
+        # Initialize logging
+        setup_logging()
+        
+        logger.info("Application startup complete")
+        
+    except Exception as e:
+        logger.error(f"Startup failed: {e}")
+        raise
+    
+    yield
+    
+    # Shutdown
+    logger.info("Shutting down application...")
+    
+    try:
+        # Close database connections
+        await close_db()
+        logger.info("Database connections closed")
+        
+        # Close Redis connections
+        await close_redis()
+        logger.info("Redis connections closed")
+        
+    except Exception as e:
+        logger.error(f"Shutdown error: {e}")
+    
+    logger.info("Application shutdown complete")
+
+
+def create_app() -> FastAPI:
+    """
+    Create and configure the FastAPI application.
+    
+    Returns:
+        Configured FastAPI application
+    """
+    # Create FastAPI app
+    app = FastAPI(
+        title=settings.APP_NAME,
+        version=settings.APP_VERSION,
+        description="Advanced RAG System with Multi-Agent Workflow",
+        docs_url="/docs" if settings.APP_ENV != "production" else None,
+        redoc_url="/redoc" if settings.APP_ENV != "production" else None,
+        openapi_url="/openapi.json",
+        lifespan=lifespan
+    )
+    
+    # Setup middleware
+    setup_middleware(app)
+    
+    # Include routers
+    app.include_router(
+        api_router,
+        prefix=settings.API_V1_PREFIX
+    )
+    
+    # Custom OpenAPI schema
+    def custom_openapi():
+        if app.openapi_schema:
+            return app.openapi_schema
+        
+        openapi_schema = get_openapi(
+            title=settings.APP_NAME,
+            version=settings.APP_VERSION,
+            description="Advanced RAG System with Multi-Agent Workflow",
+            routes=app.routes,
         )
-    else:
-        logger.info("GROQ_API_KEY found in environment variables")
+        
+        # Add security schemes if needed
+        openapi_schema["components"]["securitySchemes"] = {
+            "ApiKeyAuth": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-API-Key"
+            }
+        }
+        
+        app.openapi_schema = openapi_schema
+        return app.openapi_schema
     
-    logger.info("RAG System API started successfully")
+    app.openapi = custom_openapi
+    
+    # Root endpoint
+    @app.get("/")
+    async def root():
+        """Root endpoint with API information."""
+        return {
+            "app": settings.APP_NAME,
+            "version": settings.APP_VERSION,
+            "environment": settings.APP_ENV,
+            "docs": "/docs",
+            "health": f"{settings.API_V1_PREFIX}/health"
+        }
 
-# Include the ingestion router with /api prefix
-app.include_router(ingest.router, prefix="/api", tags=["Ingestion"])
+    @app.get("/health", include_in_schema=False)
+    async def root_health():
+        """Direct health endpoint alias."""
+        return {
+            "status": "healthy",
+            "version": settings.APP_VERSION,
+            "environment": settings.APP_ENV
+        }
+    
+    # Custom docs endpoint (optional)
+    if settings.APP_ENV == "production":
+        @app.get("/docs", include_in_schema=False)
+        async def custom_swagger_ui():
+            return get_swagger_ui_html(
+                openapi_url="/openapi.json",
+                title=f"{settings.APP_NAME} - API Documentation"
+            )
+    
+    return app
 
-# Include the query router with /api prefix
-app.include_router(query.router, prefix="/api", tags=["Query"])
 
-# Define GET endpoint for health check
-@app.get("/", tags=["Health"])
-def health_check():
-    return {"status": "RAG System API is running."}
+# Create application instance
+app = create_app()
+
+
+def main():
+    """Run the application."""
+    uvicorn.run(
+        "app.main:app",
+        host=settings.HOST,
+        port=settings.PORT,
+        workers=settings.WORKERS if settings.APP_ENV == "production" else 1,
+        reload=settings.APP_ENV == "development",
+        log_level=settings.LOG_LEVEL.lower(),
+        access_log=settings.DEBUG
+    )
 
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    main()

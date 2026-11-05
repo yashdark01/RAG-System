@@ -132,3 +132,6 @@ Thumbs.db
 # Vector database files (if generated)
 *.faiss
 *.pkl
+data/*.db
+data/vector_store/
+logs/*.log

@@ -1,174 +1,359 @@
-# RAG System
+# Advanced RAG System & Multi-Agent Architecture
 
-A Retrieval-Augmented Generation (RAG) system backend built with FastAPI and LangChain for document-based question answering.
+A production-grade, asynchronous Retrieval-Augmented Generation (RAG) and autonomous multi-agent platform built with **FastAPI** and **LangChain**.
 
-## Features
+---
 
-- **Document Ingestion**: Upload and index PDF documents using FAISS vector store and sentence transformers.
-- **Question Answering**: Ask questions and get AI-generated answers based on indexed documents with source references.
-- **Multiple LLM Support**: Integrates with Groq (default), OpenAI, Google Gemini, Ollama, and Hugging Face models.
-- **FastAPI Backend**: RESTful API with automatic documentation.
-- **Vector Search**: Efficient similarity search using FAISS for document retrieval.
+## 🌟 Key Architectural Features
 
-## Tech Stack
+- **Native LangChain Ecosystem**: Built entirely with modern LangChain Expression Language (LCEL), `create_tool_calling_agent`, and `AgentExecutor`.
+- **Multi-Model Support with Fallbacks**:
+  - **Google Gemini** (`gemini-1.5-flash`, `gemini-1.5-pro`, `gemini-2.0-flash`) via `langchain-google-genai`
+  - **Groq** (`llama3-70b-8192`, `mixtral-8x7b-32768`) via `langchain-groq`
+  - **OpenAI** (`gpt-4o`, `gpt-4o-mini`) via `langchain-openai`
+  - **Anthropic** (`claude-3-5-sonnet`) via `langchain-anthropic`
+  - Automatic cross-provider fallback chains prevent outages during rate limits.
+  - Offline `FakeListChatModel` fallback for local development without credentials.
+- **Hybrid Retrieval & Reranking**:
+  - **Dense Semantic Retrieval**: High-precision vector similarity via `FAISS` and `sentence-transformers`.
+  - **Sparse Keyword Retrieval**: BM25 keyword matching via `rank_bm25` (handles exact IDs, acronyms, and names).
+  - **Reciprocal Rank Fusion (RRF)**: Merges dense and sparse candidates via LangChain `EnsembleRetriever`.
+  - **Hierarchical Parent-Child Chunking**: Matches small child chunks for vector precision, while feeding larger parent context blocks to the LLM.
+- **Agentic Web Search & Verification**:
+  - Integrated **Tavily Search** (`TavilySearchResults`) for real-time web verification and research.
+  - Dedicated claim verification tools to combat hallucinations.
+- **Real-Time Streaming**:
+  - Server-Sent Events (SSE) streaming for RAG generation (`/query/stream`) and agent tokens (`/execute/stream`).
+- **Session Memory**:
+  - Multi-turn conversation history powered by LangChain `ChatMessageHistory` and `RunnableWithMessageHistory`.
 
-- **Backend**: FastAPI, Uvicorn
-- **AI/ML**: LangChain, Sentence Transformers, FAISS
-- **LLMs**: OpenAI GPT, Google Gemini, Ollama, Hugging Face Transformers
-- **Document Processing**: PyPDF
-- **Environment**: Python 3.11+
+---
 
-## Installation
+## 🏗️ Architecture Blueprint
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yashdark01/RAG-System.git
-   cd RAG-System
-   ```
+```text
+[ Offline Ingestion Pipeline ]
+Uploaded Files (PDF, TXT, MD)
+       │
+       ▼
+DocumentProcessor (RecursiveCharacterTextSplitter)
+       ├─► Small Child Chunks (400 chars) ──► FAISS Vector Store + BM25 Tokenizer
+       └─► Large Parent Chunks (2000 chars) ─► Persistent Document Store
 
-2. Create a virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. Set up environment variables:
-   Create a `.env` file in the root directory with your API keys:
-   ```env
-   OPENAI_API_KEY=your_openai_key
-   GOOGLE_API_KEY=your_google_key
-   # Add other keys as needed
-   ```
-
-## Usage
-
-1. Start the server:
-   ```bash
-   uvicorn app.main:app --host 0.0.0.0 --port 8000
-   ```
-   Or alternatively:
-   ```bash
-   python app/main.py
-   ```
-   The API will be available at `http://127.0.0.1:8000`
-
-2. Access the API documentation at `http://127.0.0.1:8000/docs`
-
-## Docker Usage
-
-1. Ensure Docker and Docker Compose are installed.
-
-2. Build and run the application using Docker Compose:
-   ```bash
-   docker-compose up --build
-   ```
-   The API will be available at `http://127.0.0.1:8000`
-
-3. To run in the background:
-   ```bash
-   docker-compose up -d --build
-   ```
-
-4. Stop the containers:
-   ```bash
-   docker-compose down
-   ```
-
-Note: Data (vector database and uploaded documents) is persisted in the `data/` directory via Docker volumes. Ensure your `.env` file is in the root directory with required API keys.
-
-## API Endpoints
-
-### Health Check
-- **GET** `/`
-- Returns the status of the API.
-
-### Upload Document
-- **POST** `/api/upload`
-- Upload a PDF file for indexing.
-- **Body**: Form data with `file` (PDF file)
-
-### Ask Question
-- **POST** `/api/ask`
-- Ask a question based on indexed documents.
-- **Body**:
-  ```json
-  {
-    "question": "What is the main topic?"
-  }
-  ```
-- **Response**:
-  ```json
-  {
-    "answer": "The main topic is...",
-    "sources": [
-      {
-        "page": 1,
-        "source": "document.pdf"
-      }
-    ]
-  }
-  ```
-
-## Configuration
-
-The system uses the following components (configurable in `app/core/`):
-
-- **Embeddings**: Sentence Transformers (default: `all-MiniLM-L6-v2`)
-- **Vector Store**: FAISS
-- **LLM**: Configurable via environment (Groq by default, via `GROQ_API_KEY`)
-- **Chunking**: Recursive text splitter with configurable chunk size
-
-## Project Structure
-
+[ Online Serving Pipeline ]
+User Query / Session ID
+       │
+       ▼
+Query Analysis & Expansion
+       │
+       ▼
+EnsembleRetriever (Hybrid Search)
+       ├─► FAISS Semantic Similarity Search (Weight: 60%)
+       └─► BM25 Exact Keyword Match        (Weight: 40%)
+       │
+       ▼
+Reciprocal Rank Fusion (RRF) & Context Assembly
+       │
+       ▼
+Tool-Calling Agent / LCEL RAG Chain (Gemini / Groq / OpenAI)
+       │
+       ▼
+Token-by-Token Streaming Output (SSE) + Citations
 ```
+
+---
+
+## 📁 Project Directory Structure
+
+```text
 RAG-System/
+├── .env.example                       # Environment configuration template
+├── .gitignore                         # Git ignore rules for DBs, logs, and venvs
+├── Dockerfile                         # Production container definition
+├── docker-compose.yml                 # Multi-service stack (App, PostgreSQL, Redis)
+├── pyproject.toml                     # PEP 621 package and dependency definitions
+├── requirements.txt                   # Complete dependencies list
+├── setup.sh                           # Automated environment bootstrapping with uv
+├── README.md                          # Production documentation
+│
 ├── app/
-│   ├── api/
-│   │   ├── ingest.py      # Document upload endpoint
-│   │   └── query.py       # Question answering endpoint
-│   ├── core/
-│   │   ├── embeddings.py  # Embedding configuration
-│   │   ├── llm.py         # LLM configuration
-│   │   └── vector_store.py # Vector store setup
+│   ├── config.py                      # Pydantic Settings (Gemini, Tavily, Redis, DB)
+│   ├── dependencies.py                # Centralized dependency injection container
+│   ├── main.py                        # FastAPI application entry point & lifespan
+│   │
+│   ├── llm/
+│   │   ├── provider.py                # Native LangChain BaseChatModel factory with fallbacks
+│   │   └── prompt_templates.py        # LangChain ChatPromptTemplate definitions
+│   │
+│   ├── rag/
+│   │   ├── document_processor.py      # RecursiveCharacterTextSplitter with parent-child chunks
+│   │   ├── retriever.py               # BM25 + FAISS Hybrid Search with Reciprocal Rank Fusion
+│   │   ├── vector_store.py            # FAISS vector store & LangChain Document bridge
+│   │   └── embeddings.py              # HuggingFace & SentenceTransformer embeddings
+│   │
+│   ├── workflow/
+│   │   ├── orchestrator.py            # create_tool_calling_agent & AgentExecutor with memory
+│   │   ├── tools/
+│   │   │   ├── search_tools.py        # Tavily Search tool integration
+│   │   │   ├── rag_tools.py           # LangChain knowledge base retrieval @tool
+│   │   │   └── verification_tools.py  # Fact checking & verification @tool
+│   │   └── agents/                    # Multi-agent specialized agents
+│   │
 │   ├── services/
-│   │   ├── chunker.py     # Text chunking
-│   │   ├── loader.py      # Document loading
-│   │   ├── rag_chain.py   # RAG chain setup
-│   │   └── retriever.py   # Document retrieval
-│   └── main.py            # FastAPI app
-├── data/
-│   ├── documents/         # Uploaded documents
-│   └── vector_db/         # FAISS index
-├── collection/            # Postman collection
-├── .env                   # Environment variables
-├── pyproject.toml         # Project metadata
-├── requirements.txt       # Dependencies
-└── README.md              # This file
+│   │   ├── rag_service.py             # RAG query execution & real-time token streaming
+│   │   ├── agent_service.py           # Tool-calling agent execution & streaming
+│   │   └── chat_service.py            # Multi-turn conversation management
+│   │
+│   └── api/v1/endpoints/
+│       ├── health.py                  # Health and readiness probes
+│       ├── documents.py               # Document upload, listing, and indexing
+│       ├── rag.py                     # RAG query and /query/stream endpoints
+│       ├── agents.py                  # Agent task execution and /execute/stream
+│       └── chat.py                    # Multi-turn conversational chat
+│
+└── tests/
+    ├── test_langchain_pipeline.py     # Tests for LangChain models, prompts, splitters, tools
+    ├── test_agents.py                 # Unit tests for agent workflows
+    ├── test_tools.py                  # Unit tests for search and verification tools
+    └── test_integration.py            # End-to-end integration tests
 ```
 
-## Development
+---
 
-- Run tests: `pytest` (if tests are added)
-- Lint code: `flake8` or your preferred linter
-- Format code: `black` or your preferred formatter
+## 🚀 Quickstart Guide
 
-## Contributing
+### 1. Prerequisites
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+- Python 3.10+ (Recommended: Python 3.11)
+- `uv` (Recommended) or standard Python `venv` + `pip`
+- Git
 
-## License
+### 2. Setup with uv (Recommended)
 
-MIT License - see LICENSE file for details
+```bash
+# Clone the repository
+git clone https://github.com/your-username/RAG-System.git
+cd RAG-System
 
-## Contact
+# Create virtual environment with uv
+uv venv .venv
+source .venv/bin/activate
 
-Yash Patidar - yashpatidar9691@gmail.com
+# Install all project and development dependencies
+uv pip install -e ".[dev]"
+```
+
+_Alternatively, run the automated setup script:_
+
+```bash
+chmod +x setup.sh && ./setup.sh
+```
+
+### 3. Configure Environment Variables
+
+Copy `.env.example` to `.env` and fill in your API keys:
+
+```bash
+cp .env.example .env
+```
+
+Key environment configurations:
+
+```env
+# Application
+APP_NAME="RAG System"
+APP_ENV=development
+DEBUG=true
+
+# LLM Configuration
+LLM_PROVIDER=gemini              # Options: gemini, groq, openai, anthropic
+LLM_MODEL=gemini-1.5-flash
+GOOGLE_API_KEY=your_google_api_key
+GROQ_API_KEY=your_groq_api_key
+OPENAI_API_KEY=your_openai_api_key
+ANTHROPIC_API_KEY=your_anthropic_api_key
+
+# Web Search
+TAVILY_API_KEY=your_tavily_api_key
+
+# Vector Store & Embeddings
+VECTOR_STORE_PATH=./data/vector_store
+EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+```
+
+### 4. Run the Application
+
+With `uv`:
+
+```bash
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Or with activated virtual environment:
+
+```bash
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Open **[http://localhost:8000/docs](http://localhost:8000/docs)** to view the interactive OpenAPI documentation.
+
+---
+
+## 🐳 Docker Deployment
+
+To launch the full stack with PostgreSQL and Redis:
+
+```bash
+docker-compose up --build -d
+```
+
+Services:
+
+- **FastAPI Backend**: `http://localhost:8000`
+- **PostgreSQL Database**: `localhost:5432`
+- **Redis Cache**: `localhost:6379`
+
+To view logs:
+
+```bash
+docker-compose logs -f app
+```
+
+To stop:
+
+```bash
+docker-compose down
+```
+
+---
+
+## 📡 API Reference & Examples
+
+| Method | Endpoint                        | Description                                        |
+| :----- | :------------------------------ | :------------------------------------------------- |
+| `GET`  | `/api/v1/health`                | Basic application health check                     |
+| `GET`  | `/api/v1/health/ready`          | Deep readiness check (LLM, vector store, DB)       |
+| `POST` | `/api/v1/documents/upload`      | Upload & hierarchical chunk index (PDF, TXT, MD)   |
+| `GET`  | `/api/v1/documents/{id}`        | Retrieve indexed document metadata                 |
+| `POST` | `/api/v1/rag/query`             | Standard RAG question answering with citations     |
+| `POST` | `/api/v1/rag/query/stream`      | Server-Sent Events (SSE) token streaming           |
+| `POST` | `/api/v1/agents/execute`        | Tool-calling autonomous agent execution            |
+| `POST` | `/api/v1/agents/execute/stream` | Real-time agent reasoning token streaming          |
+| `POST` | `/api/v1/chat`                  | Multi-turn conversational chat with session memory |
+
+### Example 1: Ingest a Document
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/documents/upload" \
+  -F "file=@sample_report.pdf"
+```
+
+### Example 2: Standard RAG Query
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/rag/query" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What are the main findings of the report?",
+    "top_k": 5
+  }'
+```
+
+### Example 3: Stream RAG Query (Server-Sent Events)
+
+```bash
+curl -N -X POST "http://localhost:8000/api/v1/rag/query/stream" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "Explain the conclusion in detail."
+  }'
+```
+
+### Example 4: Autonomous Agent Execution (with Tavily Search)
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/agents/execute" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task": "Research recent advancements in Agentic RAG and verify with web search.",
+    "agent_type": "orchestrator"
+  }'
+```
+
+---
+
+## 🧪 Testing
+
+The test suite contains **109 comprehensive unit and integration tests** covering all modules, running fully offline with fast mocked embeddings and LLMs:
+
+```bash
+# Run all tests using uv
+uv run pytest tests/ -v
+
+# Run a specific test module
+uv run pytest tests/test_retriever.py -v
+uv run pytest tests/test_services.py -v
+uv run pytest tests/test_integration.py -v
+```
+
+### Test Suite Structure
+
+| Test File | Target Module | Scope & Capabilities Tested |
+| :--- | :--- | :--- |
+| [`test_config.py`](file:///Users/yash/Desktop/RAG-System/tests/test_config.py) | `app.config` | Settings parsing, fallback keys (`GEMINI_API_KEY` ↔ `GOOGLE_API_KEY`), and debug flags |
+| [`test_document_processor.py`](file:///Users/yash/Desktop/RAG-System/tests/test_document_processor.py) | `app.rag.document_processor` | Text cleaning, parent-child chunking, PDF extraction, and LangChain Document conversion |
+| [`test_retriever.py`](file:///Users/yash/Desktop/RAG-System/tests/test_retriever.py) | `app.rag.retriever` | Semantic vector search, BM25 keyword matching, Reciprocal Rank Fusion (RRF), and metadata filters |
+| [`test_services.py`](file:///Users/yash/Desktop/RAG-System/tests/test_services.py) | `app.services` | `DocumentService`, `RAGService`, `ChatService`, and `AgentService` task workflows |
+| [`test_agents.py`](file:///Users/yash/Desktop/RAG-System/tests/test_agents.py) | `app.workflow.agents` | Multi-agent execution (Query, Research, Synthesis, Validation) |
+| [`test_tools.py`](file:///Users/yash/Desktop/RAG-System/tests/test_tools.py) | `app.workflow.tools` | RAG retrieval, vector store search, Tavily web search, and claim verification tools |
+| [`test_domain_models.py`](file:///Users/yash/Desktop/RAG-System/tests/test_domain_models.py) | `app.models` | Pydantic schema validation, domain entities, and metadata serialization |
+| [`test_langchain_pipeline.py`](file:///Users/yash/Desktop/RAG-System/tests/test_langchain_pipeline.py) | `app.llm`, `app.workflow` | Native LangChain 1.3+ chat models, prompt templates, and agent creation |
+| [`test_integration.py`](file:///Users/yash/Desktop/RAG-System/tests/test_integration.py) | `app.main`, `app.api` | End-to-end FastAPI endpoint tests and multi-agent pipeline integration |
+
+---
+
+## 📜 Operational Scripts
+
+Convenient utility scripts located in `scripts/`:
+
+```bash
+# 1. Start development server with reload and environment check
+./scripts/run_dev.sh
+
+# 2. Run test suite
+./scripts/run_tests.sh
+
+# 3. Run Ruff code quality & linting checks
+./scripts/lint.sh
+
+# 4. Run pre-flight environment diagnostic
+uv run python scripts/verify_env.py
+
+# 5. Seed knowledge base documents
+uv run python scripts/seed_data.py
+
+# 6. Build Docker image
+./scripts/docker_build.sh
+```
+
+---
+
+## 🔄 CI/CD Pipelines
+
+Automated GitHub Actions workflows are configured in [`.github/workflows/`](file:///Users/yash/Desktop/RAG-System/.github/workflows):
+
+1. **Continuous Integration (`ci.yml`)**:
+   - **Triggers**: On push to `main`, `master`, `feat/**`, `release/**`, and pull requests.
+   - **Quality Check**: Runs Ruff linting and syntax validation.
+   - **Matrix Testing**: Executes the full 109-test suite on **Python 3.10, 3.11, and 3.12** using `uv` with dependency caching.
+   - **Docker Validation**: Performs automated dry-run container builds.
+
+2. **Continuous Deployment (`cd.yml`)**:
+   - **Triggers**: On semantic version tags (`v*.*.*`) or push to `main`.
+   - **Publishing**: Builds multi-architecture image and publishes to GitHub Container Registry (`ghcr.io`).
+
+---
+
+## 📄 License
+
+MIT License.
