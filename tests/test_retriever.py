@@ -132,3 +132,4 @@ class TestRetrieverService:
         retriever.reranking_enabled = True
         results = await retriever.retrieve("machine learning", top_k=2, use_cache=False)
         assert len(results) <= 2
+

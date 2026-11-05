@@ -312,6 +312,48 @@ uv run pytest tests/test_integration.py -v
 
 ---
 
+## 📜 Operational Scripts
+
+Convenient utility scripts located in `scripts/`:
+
+```bash
+# 1. Start development server with reload and environment check
+./scripts/run_dev.sh
+
+# 2. Run test suite
+./scripts/run_tests.sh
+
+# 3. Run Ruff code quality & linting checks
+./scripts/lint.sh
+
+# 4. Run pre-flight environment diagnostic
+uv run python scripts/verify_env.py
+
+# 5. Seed knowledge base documents
+uv run python scripts/seed_data.py
+
+# 6. Build Docker image
+./scripts/docker_build.sh
+```
+
+---
+
+## 🔄 CI/CD Pipelines
+
+Automated GitHub Actions workflows are configured in [`.github/workflows/`](file:///Users/yash/Desktop/RAG-System/.github/workflows):
+
+1. **Continuous Integration (`ci.yml`)**:
+   - **Triggers**: On push to `main`, `master`, `feat/**`, `release/**`, and pull requests.
+   - **Quality Check**: Runs Ruff linting and syntax validation.
+   - **Matrix Testing**: Executes the full 109-test suite on **Python 3.10, 3.11, and 3.12** using `uv` with dependency caching.
+   - **Docker Validation**: Performs automated dry-run container builds.
+
+2. **Continuous Deployment (`cd.yml`)**:
+   - **Triggers**: On semantic version tags (`v*.*.*`) or push to `main`.
+   - **Publishing**: Builds multi-architecture image and publishes to GitHub Container Registry (`ghcr.io`).
+
+---
+
 ## 📄 License
 
 MIT License.

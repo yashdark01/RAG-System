@@ -2,7 +2,7 @@
 Caching service using Redis for distributed caching.
 """
 
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, Dict
 import json
 import hashlib
 from datetime import timedelta

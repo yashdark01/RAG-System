@@ -112,3 +112,4 @@ class TestDocumentProcessor:
         assert isinstance(lc_docs[0], LCDocument)
         assert lc_docs[0].page_content == "LangChain integration test chunk 1"
         assert lc_docs[0].metadata["source"] == "test.txt"
+

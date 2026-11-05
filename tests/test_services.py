@@ -198,3 +198,4 @@ class TestAgentService:
         )
 
         assert "Error executing task" in result["output"]
+
