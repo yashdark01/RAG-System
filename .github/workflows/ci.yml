@@ -2,9 +2,9 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [ main, master, "feat/**", "release/**" ]
+    branches: ["main", "master", "feat/**", "release/**"]
   pull_request:
-    branches: [ main, master ]
+    branches: ["main", "master"]
   workflow_dispatch:
 
 concurrency:
@@ -48,10 +48,10 @@ jobs:
         python-version: ["3.10", "3.11", "3.12"]
 
     env:
-      APP_ENV: development
-      DEBUG: false
-      DATABASE_URL: sqlite+aiosqlite:///:memory:
-      RATE_LIMIT_ENABLED: false
+      APP_ENV: "development"
+      DEBUG: "false"
+      DATABASE_URL: "sqlite+aiosqlite:///:memory:"
+      RATE_LIMIT_ENABLED: "false"
 
     steps:
       - name: Checkout repository
